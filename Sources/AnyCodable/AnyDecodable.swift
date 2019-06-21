@@ -59,6 +59,8 @@ extension _AnyDecodable {
             self.init(double)
         } else if let string = try? container.decode(String.self) {
             self.init(string)
+        } else if let uuid = try? container.decode(UUID.self) {
+            self.init(uuid)
         } else if let array = try? container.decode([AnyCodable].self) {
             self.init(array.map { $0.value })
         } else if let dictionary = try? container.decode([String: AnyCodable].self) {

@@ -2,33 +2,33 @@ import Foundation
 
 /**
  A type-erased `Encodable` value.
-
+ 
  The `AnyEncodable` type forwards encoding responsibilities
  to an underlying value, hiding its specific underlying type.
-
+ 
  You can encode mixed-type values in dictionaries
  and other collections that require `Encodable` conformance
  by declaring their contained type to be `AnyEncodable`:
-
-     let dictionary: [String: AnyEncodable] = [
-         "boolean": true,
-         "integer": 1,
-         "double": 3.14159265358979323846,
-         "string": "string",
-         "array": [1, 2, 3],
-         "nested": [
-             "a": "alpha",
-             "b": "bravo",
-             "c": "charlie"
-         ]
-     ]
-
-     let encoder = JSONEncoder()
-     let json = try! encoder.encode(dictionary)
+ 
+ let dictionary: [String: AnyEncodable] = [
+ "boolean": true,
+ "integer": 1,
+ "double": 3.14159265358979323846,
+ "string": "string",
+ "array": [1, 2, 3],
+ "nested": [
+ "a": "alpha",
+ "b": "bravo",
+ "c": "charlie"
+ ]
+ ]
+ 
+ let encoder = JSONEncoder()
+ let json = try! encoder.encode(dictionary)
  */
 public struct AnyEncodable: Encodable {
     public let value: Any
-
+    
     public init<T>(_ value: T?) {
         self.value = value ?? ()
     }
@@ -46,7 +46,7 @@ extension AnyEncodable: _AnyEncodable {}
 extension _AnyEncodable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-
+        
         switch value {
             #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         case let number as NSNumber:
@@ -90,12 +90,14 @@ extension _AnyEncodable {
             try container.encode(array.map { AnyCodable($0) })
         case let dictionary as [String: Any?]:
             try container.encode(dictionary.mapValues { AnyCodable($0) })
+        case let uuid as UUID:
+            try container.encode(uuid)
         default:
             let context = EncodingError.Context(codingPath: container.codingPath, debugDescription: "AnyCodable value cannot be encoded")
             throw EncodingError.invalidValue(value, context)
         }
     }
-
+    
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     private func encode(nsnumber: NSNumber, into container: inout SingleValueEncodingContainer) throws {
         switch CFNumberGetType(nsnumber) {
@@ -121,10 +123,10 @@ extension _AnyEncodable {
             try container.encode(nsnumber.floatValue)
         case .doubleType, .float64Type, .cgFloatType:
             try container.encode(nsnumber.doubleValue)
-        #if swift(>=5.0)
-            @unknown default:
-                fatalError()
-        #endif
+            #if swift(>=5.0)
+        @unknown default:
+            fatalError()
+            #endif
         }
     }
     #endif
@@ -209,32 +211,33 @@ extension _AnyEncodable {
     public init(nilLiteral _: ()) {
         self.init(nil as Any?)
     }
-
+    
     public init(booleanLiteral value: Bool) {
         self.init(value)
     }
-
+    
     public init(integerLiteral value: Int) {
         self.init(value)
     }
-
+    
     public init(floatLiteral value: Double) {
         self.init(value)
     }
-
+    
     public init(extendedGraphemeClusterLiteral value: String) {
         self.init(value)
     }
-
+    
     public init(stringLiteral value: String) {
         self.init(value)
     }
-
+    
     public init(arrayLiteral elements: Any...) {
         self.init(elements)
     }
-
+    
     public init(dictionaryLiteral elements: (AnyHashable, Any)...) {
         self.init([AnyHashable: Any](elements, uniquingKeysWith: { first, _ in first }))
     }
 }
+
